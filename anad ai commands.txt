@@ -1,0 +1,17 @@
+git config --global user.email "jamesjules1996@gmail.com"
+git config --global user.name "Jamesjules"
+git init
+git remote add origin https://github.com/Jamesjules/anad-ai.git
+
+
+git config --global user.email "jamesjules1996@gmail.com"
+git config --global user.name "Jamesjules"
+git init
+git remote add origin https://github.com/Jamesjules/anad-ai.git
+
+This is the genesis commit of Anad. The first push. The moment the project went from an idea in a conversation to a real public repository.
+From now on, every time you update code:
+
+git add .
+git commit -m "describe what you changed"
+git push
