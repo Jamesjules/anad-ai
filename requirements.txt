@@ -1,0 +1,21 @@
+# Anad Dependencies
+# Kept minimal by design
+# No corporate AI dependencies ever
+
+# Core — standard library only for tokenizer
+# Python 3.9+ required
+
+# Testing
+pytest>=7.0.0
+
+# Utilities
+tqdm>=4.65.0          # Progress bars for training
+
+# Networking (for node communication)
+# Added when node software is built
+# websockets>=11.0
+# aiohttp>=3.8.0
+
+# No torch yet — added when model training begins
+# No transformers library — we build our own
+# No corporate model dependencies — ever
