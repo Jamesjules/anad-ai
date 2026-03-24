@@ -1,3 +1,6 @@
+anad Genesis key anad1_8f3aK92mPqRxNvL4dTzYbCwJ7eHsUiOp_d92c
+
+
 git config --global user.email "jamesjules1996@gmail.com"
 git config --global user.name "Jamesjules"
 git init
