@@ -148,7 +148,7 @@ cat > "$HOME/anad.sh" << 'MAINSCRIPT'
 cd $HOME/anad
 termux-wake-lock 2>/dev/null || true
 
-python -c "
+python -c 
 import sys, os, getpass, json
 sys.path.insert(0, '.')
 from mobile.mobile_node import MobileAnadNode

@@ -1,4 +1,18 @@
+# Python
 __pycache__/
 *.pyc
 *.pyo
+*.egg-info/
+
+# Anad runtime data — NEVER commit this
+anad_data/
+*.anad_data/
+~/.anad_data/
+checkpoints/
+*.enc
+identity.json
+
+# Misc
 .env
+package-lock.json
+*.log
