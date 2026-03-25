@@ -1,0 +1,11 @@
+{
+  "node_id": "anad1_4ccd35bbd635c4a03678cf44f1",
+  "public_key": "cec88d8de1cd22e298fe014e3d77d382c893ba70649bf8422aa87d3524668923",
+  "host": "117.254.39.176",
+  "port": 8765,
+  "timestamp": 1774440919.949728,
+  "version": "0.1.0",
+  "role": "genesis",
+  "message": "Anad genesis node \u2014 public AI for humanity",
+  "signature": "3fc83cee3f6a31b743d9355c3361579c0bf4bdf38da33cf501d8327ce5a73807a337c4553bc3a8e410b632fc1a9b0eb2881452a6e2f973876ee88e6d84116e04"
+}

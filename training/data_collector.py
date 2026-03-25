@@ -141,14 +141,14 @@ class DatasetIndex:
             "seen": list(self._seen),
             "records": self._records[-10000:],  # keep last 10k
         }
-        with open(self.index_path, "w") as f:
+        with open(self.index_path, "w", encoding="utf-8") as f:
             json.dump(data, f)
 
     def _load(self):
         if not os.path.exists(self.index_path):
             return
         try:
-            with open(self.index_path) as f:
+            with open(self.index_path, encoding="utf-8") as f:
                 data = json.load(f)
             self._seen = set(data.get("seen", []))
             self._records = data.get("records", [])
@@ -549,6 +549,6 @@ class AnadDataCollector:
         count = 0
         for f in os.listdir(self.data_dir):
             if f.endswith(".jsonl"):
-                with open(os.path.join(self.data_dir, f)) as chunk:
+                with open(os.path.join(self.data_dir, f), encoding="utf-8") as chunk:
                     count += sum(1 for _ in chunk)
         return count

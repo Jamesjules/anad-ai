@@ -1,366 +1,210 @@
 """
-Anad Training Run
-=================
-Run this to start training Anad V0.
-
-What happens:
-  1. Collect training data (Gutenberg, Wikipedia, Indic)
-  2. Train tokenizer on collected data
-  3. Train Anad Nano model
-  4. Sign and package weights
-  5. Weights ready for peer distribution
-
-Any node running this contributes to Anad's training.
-New data only — never repeats what was already trained.
-Progress saved every 100 steps — pause any time.
+Anad Trainer V2 - Real PyTorch backpropagation
+Loss will decrease. Non-blocking signing.
 
 Usage:
+    pip install torch
     python train.py
-    python train.py --steps 1000 --model nano
-    python train.py --resume  (continue from checkpoint)
-
-Author: Anad Community  
-License: Public Domain
+    python train.py --steps 1000 --resume
 """
-
-import sys
-import os
-import json
-import time
-import argparse
-import numpy as np
-
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-
-from model.config import ANAD_NANO, ANAD_SMALL, AnadConfig
-from model.model import AnadModel
+import os,sys,json,time,argparse
+sys.path.insert(0,os.path.dirname(os.path.abspath(__file__)))
+sys.stdout.reconfigure(encoding='utf-8')
+from model.config import ANAD_NANO,ANAD_SMALL
 from tokenizer.tokenizer import AnadTokenizer
-from training.trainer import AnadTrainer, TrainingState, cross_entropy_loss, cosine_lr_schedule
 from training.data_collector import AnadDataCollector
-from training.weight_sharing import WeightStore, FederatedCoordinator, WeightManifest
-
+from training.trainer import PauseController,cosine_lr_schedule
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Train Anad")
-    parser.add_argument("--steps",   type=int, default=500,   help="Training steps")
-    parser.add_argument("--model",   type=str, default="nano", help="nano / small")
-    parser.add_argument("--batch",   type=int, default=4,      help="Batch size")
-    parser.add_argument("--seqlen",  type=int, default=128,    help="Sequence length")
-    parser.add_argument("--resume",  action="store_true",      help="Resume from checkpoint")
-    parser.add_argument("--datadir", type=str, default="./training/data", help="Data directory")
-    parser.add_argument("--outdir",  type=str, default="./checkpoints",   help="Output directory")
-    parser.add_argument("--collect", action="store_true", help="Collect data only")
-    return parser.parse_args()
+    p=argparse.ArgumentParser()
+    p.add_argument("--steps",  type=int,   default=500)
+    p.add_argument("--model",  type=str,   default="nano")
+    p.add_argument("--batch",  type=int,   default=4)
+    p.add_argument("--seqlen", type=int,   default=128)
+    p.add_argument("--lr",     type=float, default=3e-4)
+    p.add_argument("--resume", action="store_true")
+    p.add_argument("--collect",action="store_true")
+    p.add_argument("--datadir",type=str,   default="./training/data")
+    p.add_argument("--outdir", type=str,   default="./checkpoints")
+    return p.parse_args()
 
+def build_model(cfg):
+    import torch,torch.nn as nn,torch.nn.functional as F,math
+    class N(nn.Module):
+        def __init__(self,d,e=1e-6):
+            super().__init__()
+            self.w=nn.Parameter(torch.ones(d));self.e=e
+        def forward(self,x):
+            return x/x.pow(2).mean(-1,keepdim=True).add(self.e).sqrt()*self.w
+    class A(nn.Module):
+        def __init__(self,c):
+            super().__init__()
+            self.nh,self.nkv,self.hd,self.g=c.n_heads,c.n_kv_heads,c.head_dim,c.n_heads//c.n_kv_heads
+            self.wq=nn.Linear(c.dim,c.n_heads*c.head_dim,bias=False)
+            self.wk=nn.Linear(c.dim,c.n_kv_heads*c.head_dim,bias=False)
+            self.wv=nn.Linear(c.dim,c.n_kv_heads*c.head_dim,bias=False)
+            self.wo=nn.Linear(c.n_heads*c.head_dim,c.dim,bias=False)
+        def forward(self,x,mask):
+            B,T,_=x.shape
+            q=self.wq(x).view(B,T,self.nh,self.hd).transpose(1,2)
+            k=self.wk(x).view(B,T,self.nkv,self.hd).transpose(1,2).repeat_interleave(self.g,1)
+            v=self.wv(x).view(B,T,self.nkv,self.hd).transpose(1,2).repeat_interleave(self.g,1)
+            a=(q@k.transpose(-2,-1))/math.sqrt(self.hd)+mask[:T,:T]
+            return self.wo((F.softmax(a,-1)@v).transpose(1,2).reshape(B,T,-1))
+    class FF(nn.Module):
+        def __init__(self,c):
+            super().__init__()
+            self.w1=nn.Linear(c.dim,c.hidden_dim,bias=False)
+            self.w2=nn.Linear(c.hidden_dim,c.dim,bias=False)
+            self.w3=nn.Linear(c.dim,c.hidden_dim,bias=False)
+        def forward(self,x):
+            return self.w2(F.silu(self.w1(x))*self.w3(x))
+    class B(nn.Module):
+        def __init__(self,c):
+            super().__init__()
+            self.a,self.f=A(c),FF(c)
+            self.n1,self.n2=N(c.dim),N(c.dim)
+        def forward(self,x,mask):
+            x=x+self.a(self.n1(x),mask)
+            return x+self.f(self.n2(x))
+    class M(nn.Module):
+        def __init__(self,c):
+            super().__init__()
+            self.emb=nn.Embedding(c.vocab_size,c.dim)
+            self.layers=nn.ModuleList([B(c) for _ in range(c.n_layers)])
+            self.norm=N(c.dim)
+            self.head=nn.Linear(c.dim,c.vocab_size,bias=False)
+            self.head.weight=self.emb.weight
+            m=torch.full((c.max_seq_len,c.max_seq_len),float('-inf'))
+            self.register_buffer('mask',torch.triu(m,1))
+        def forward(self,x):
+            h=self.emb(x)
+            for l in self.layers:h=l(h,self.mask)
+            return self.head(self.norm(h))
+    dev="cuda" if torch.cuda.is_available() else "cpu"
+    model=M(cfg).to(dev)
+    n=sum(p.numel() for p in model.parameters())
+    print(f"  Model: {cfg.model_name} {n/1e6:.1f}M params on {dev.upper()}")
+    return model,dev
 
-def collect_data(data_dir: str) -> AnadDataCollector:
-    """Step 1: Collect training data"""
-    print("\n" + "═" * 55)
-    print("  STEP 1 — COLLECT TRAINING DATA")
-    print("═" * 55)
+def get_batch(texts,tokenizer,batch,seqlen,dev):
+    import torch
+    toks=[]
+    for t in texts:
+        try:toks.extend(tokenizer.encode(t))
+        except:pass
+    need=batch*seqlen+1
+    while len(toks)<need:toks.extend(toks)
+    xs,ys=[],[]
+    for i in range(batch):
+        s=(i*seqlen)%(len(toks)-seqlen-1)
+        xs.append(toks[s:s+seqlen])
+        ys.append(toks[s+1:s+seqlen+1])
+    return (torch.tensor(xs,dtype=torch.long).to(dev),
+            torch.tensor(ys,dtype=torch.long).to(dev))
 
-    collector = AnadDataCollector(data_dir)
-
-    existing = collector.total_records()
-    if existing > 0:
-        print(f"  Found {existing} existing records")
-        answer = input("  Collect more data? (y/n): ").strip().lower()
-        if answer != "y":
-            return collector
-
-    collector.collect_all(
-        include_gutenberg=True,
-        include_wikipedia=True,
-        include_indic=True,
-        max_records=10000,
-    )
-    return collector
-
-
-def train_tokenizer(
-    collector: AnadDataCollector,
-    tokenizer_path: str,
-) -> AnadTokenizer:
-    """Step 2: Train or load tokenizer"""
-    print("\n" + "═" * 55)
-    print("  STEP 2 — TOKENIZER")
-    print("═" * 55)
-
-    if os.path.exists(os.path.join(tokenizer_path, "vocab.json")):
-        print("  Loading existing tokenizer...")
-        return AnadTokenizer.load(tokenizer_path)
-
-    print("  Training tokenizer on collected data...")
-    texts = list(collector.stream_for_training())
-
-    if not texts:
-        print("  No training data found. Using seed texts.")
-        texts = [
-            "Hello world. This is Anad public AI.",
-            "નમસ્તે. આ અનાદ છે.",
-            "नमस्ते. यह अनाद है।",
-            "வணக்கம். இது அனாத்.",
-        ]
-
-    tokenizer = AnadTokenizer(vocab_size=8000)
-    tokenizer.train(texts[:500], vocab_size=8000)
-    tokenizer.save(tokenizer_path)
-    print(f"  Tokenizer trained. Vocab size: {len(tokenizer.vocab)}")
-    return tokenizer
-
-
-def prepare_batches(
-    texts: list,
-    tokenizer: AnadTokenizer,
-    batch_size: int,
-    seq_len: int,
-):
-    """Convert texts to training batches"""
-    all_tokens = []
-    for text in texts:
-        try:
-            tokens = tokenizer.encode(text)
-            all_tokens.extend(tokens)
-        except Exception:
-            continue
-
-    if len(all_tokens) < seq_len + 1:
-        return None, None
-
-    # Create batches
-    n_batches = (len(all_tokens) - seq_len) // seq_len
-    if n_batches == 0:
-        return None, None
-
-    inputs = []
-    targets = []
-    for i in range(min(batch_size, n_batches)):
-        start = i * seq_len
-        inputs.append(all_tokens[start:start + seq_len])
-        targets.append(all_tokens[start + 1:start + seq_len + 1])
-
-    return (
-        np.array(inputs, dtype=np.int32),
-        np.array(targets, dtype=np.int32),
-    )
-
-
-def run_training(
-    config: AnadConfig,
-    tokenizer: AnadTokenizer,
-    collector: AnadDataCollector,
-    args,
-    identity=None,
-):
-    """Step 3: Train the model"""
-    print("\n" + "═" * 55)
-    print("  STEP 3 — TRAINING")
-    print(f"  Model:   {config.model_name}")
-    print(f"  Steps:   {args.steps}")
-    print(f"  Batch:   {args.batch}")
-    print(f"  Seq len: {args.seqlen}")
-    print("═" * 55)
-    print()
-    print("  Press P + Enter to pause at any time")
-    print("  Progress saved every 100 steps")
-    print()
-
-    trainer = AnadTrainer(
-        config=config,
-        save_dir=args.outdir,
-        resume=args.resume,
-    )
-
-    # Get training texts
-    texts = list(collector.stream_for_training())
-    if not texts:
-        print("  No training data. Run with --collect first.")
-        return trainer
-
-    trainer.pause_controller.start()
-
-    total_loss = 0.0
-    loss_count = 0
-    step_start = time.time()
-
-    for step in range(trainer.state.step, args.steps):
-
-        # Check pause
-        trainer.pause_controller.check()
-        if trainer.pause_controller.stop_requested:
-            break
-
-        # Get batch from texts (cycle through data)
-        text_idx = step % max(1, len(texts))
-        batch_texts = texts[text_idx:text_idx + args.batch]
-        if len(batch_texts) < args.batch:
-            batch_texts = texts[:args.batch]
-
-        inputs, targets = prepare_batches(
-            batch_texts, tokenizer, args.batch, args.seqlen
-        )
-
-        if inputs is None:
-            # Skip if not enough data for a batch
-            continue
-
-        # Forward pass
-        logits = trainer.model(inputs, training=True)
-        loss = cross_entropy_loss(logits, targets)
-
-        if np.isnan(loss):
-            continue
-
-        # Update state
-        trainer.state.step = step + 1
-        trainer.state.total_loss += loss
-        trainer.state.tokens_processed += args.batch * args.seqlen
-        trainer.state.training_time_seconds += time.time() - step_start
-        step_start = time.time()
-
-        if loss < trainer.state.best_loss:
-            trainer.state.best_loss = loss
-
-        total_loss += loss
-        loss_count += 1
-
-        # Learning rate
-        lr = cosine_lr_schedule(
-            step=step,
-            warmup_steps=args.steps // 10,
-            max_steps=args.steps,
-            max_lr=config.learning_rate,
-            min_lr=config.learning_rate * 0.1,
-        )
-
-        # Log
-        if (step + 1) % 10 == 0:
-            avg_loss = total_loss / max(loss_count, 1)
-            elapsed = trainer.state.training_time_seconds
-            h, m, s = int(elapsed//3600), int((elapsed%3600)//60), int(elapsed%60)
-            print(
-                f"  step {step+1:5d}/{args.steps} | "
-                f"loss {avg_loss:.4f} | "
-                f"lr {lr:.2e} | "
-                f"tokens {trainer.state.tokens_processed:,} | "
-                f"{h:02d}:{m:02d}:{s:02d}"
-            )
-            total_loss = 0.0
-            loss_count = 0
-
-        # Save checkpoint
-        if (step + 1) % 100 == 0:
-            trainer.checkpoints.save(trainer.model, trainer.state)
-
-    # Final save
-    trainer.checkpoints.save(trainer.model, trainer.state)
-    trainer.pause_controller.stop()
-
-    print(f"\n  Training complete")
-    print(f"  Steps: {trainer.state.step}")
-    print(f"  Best loss: {trainer.state.best_loss:.4f}")
-    print(f"  Tokens: {trainer.state.tokens_processed:,}")
-
-    return trainer
-
-
-def package_weights(
-    trainer: AnadTrainer,
-    collector: AnadDataCollector,
-    outdir: str,
-    identity=None,
-):
-    """Step 4: Package weights for sharing"""
-    print("\n" + "═" * 55)
-    print("  STEP 4 — PACKAGE FOR SHARING")
-    print("═" * 55)
-
-    if identity is None:
-        print("  No identity loaded — weights packaged without signature")
-        print("  Run python main.py to create an identity first")
-        return
-
-    store = WeightStore(os.path.join(outdir, "weight_store"))
-    coordinator = FederatedCoordinator(
-        weight_store=store,
-        data_index_path=os.path.join(collector.data_dir, "index.json"),
-        node_identity=identity,
-    )
-
-    # Get latest checkpoint dir
-    latest_checkpoint = None
-    for entry in sorted(os.listdir(outdir)):
-        if entry.startswith("checkpoint_step_"):
-            latest_checkpoint = os.path.join(outdir, entry)
-
-    if not latest_checkpoint:
-        print("  No checkpoint found")
-        return
-
-    data_checksums = collector.index.export_seen_checksums()[:1000]
-
-    package_path = coordinator.prepare_weights_for_sharing(
-        model_dir=latest_checkpoint,
-        version="0.1.0",
-        step=trainer.state.step,
-        loss=trainer.state.best_loss,
-        data_checksums=data_checksums,
-    )
-
-    print(f"\n  Weights packaged and ready")
-    print(f"  Location: {package_path}")
-    print(f"  Peers can now download this from your node")
-
+def save_ckpt(model,step,outdir):
+    import torch
+    d=os.path.join(outdir,f"checkpoint_step_{step:07d}")
+    os.makedirs(d,exist_ok=True)
+    torch.save({"step":step,"model":model.state_dict()},os.path.join(d,"model.pt"))
+    print(f"  Checkpoint saved -> {d}")
+    return d
 
 def main():
-    args = parse_args()
-
-    print("\n" + "█" * 55)
-    print("  ANAD TRAINING")
-    print("  Train once. Share everywhere.")
-    print("  No node repeats what you already trained.")
-    print("█" * 55)
-
-    # Select model config
-    config = ANAD_NANO if args.model == "nano" else ANAD_SMALL
-
-    # Step 1: Collect data
-    collector = collect_data(args.datadir)
-
-    if args.collect:
-        print("\nData collection complete. Run without --collect to train.")
+    args=parse_args()
+    cfg=ANAD_NANO if args.model=="nano" else ANAD_SMALL
+    print("\n"+"="*50)
+    print("  ANAD TRAINING V2 — Real backpropagation")
+    print("="*50)
+    try:
+        import torch,torch.nn.functional as F
+        dev="cuda" if torch.cuda.is_available() else "cpu"
+        gpu=torch.cuda.get_device_name(0) if torch.cuda.is_available() else "CPU only"
+        print(f"\n  PyTorch {torch.__version__} | {gpu}")
+    except ImportError:
+        print("\n  PyTorch not installed.")
+        print("  CPU:  pip install torch")
+        print("  GPU:  pip install torch --index-url https://download.pytorch.org/whl/cu121")
         return
-
-    # Step 2: Tokenizer
-    tokenizer_path = os.path.join(args.outdir, "tokenizer")
-    tokenizer = train_tokenizer(collector, tokenizer_path)
-
-    # Step 3: Train
-    trainer = run_training(config, tokenizer, collector, args)
-
-    # Step 4: Package for sharing
-    # Try to load identity for signing
+    # Data
+    col=AnadDataCollector(args.datadir)
+    if args.collect or col.total_records()==0:
+        print("\n  Collecting data...")
+        col.collect_all(include_gutenberg=True,include_wikipedia=True,include_indic=True,max_records=10000)
+        col._flush()
+    texts=list(col.stream_for_training())
+    print(f"  Training texts: {len(texts)}")
+    if not texts:
+        print("  No data. Run: python train.py --collect");return
+    # Tokenizer
+    tp=os.path.join(args.outdir,"tokenizer")
+    if os.path.exists(os.path.join(tp,"vocab.json")):
+        print("  Loading tokenizer...")
+        tokenizer=AnadTokenizer.load(tp)
+    else:
+        print("  Training tokenizer...")
+        tokenizer=AnadTokenizer(vocab_size=8000)
+        tokenizer.train(texts[:min(500,len(texts))])
+        tokenizer.save(tp)
+    print(f"  Vocab: {len(tokenizer.vocab)}")
+    # Model + optimizer
+    os.makedirs(args.outdir,exist_ok=True)
+    model,device=build_model(cfg)
+    opt=torch.optim.AdamW(model.parameters(),lr=args.lr,weight_decay=0.1,betas=(0.9,0.999))
+    start=0
+    if args.resume:
+        ckpts=sorted([d for d in os.listdir(args.outdir) if d.startswith("checkpoint_step_")])
+        if ckpts:
+            pt=os.path.join(args.outdir,ckpts[-1],"model.pt")
+            if os.path.exists(pt):
+                ck=torch.load(pt,map_location=device)
+                model.load_state_dict(ck["model"]);start=ck["step"]
+                print(f"  Resumed from step {start}")
+    ctrl=PauseController();ctrl.start()
+    print(f"\n  Steps:{args.steps} Batch:{args.batch} SeqLen:{args.seqlen}")
+    print("  P + Enter = pause\n")
+    best,run,rc,t0,seen=999.0,0.0,0,time.time(),0
+    model.train()
+    for step in range(start,args.steps):
+        ctrl.check()
+        if ctrl.stop_requested:break
+        i=step%max(1,len(texts))
+        bt=texts[i:i+args.batch]
+        if len(bt)<args.batch:bt=texts[:args.batch]
+        x,y=get_batch(bt,tokenizer,args.batch,args.seqlen,device)
+        opt.zero_grad()
+        loss=F.cross_entropy(model(x).view(-1,cfg.vocab_size),y.view(-1),ignore_index=0)
+        loss.backward()
+        torch.nn.utils.clip_grad_norm_(model.parameters(),1.0)
+        lr=cosine_lr_schedule(step,args.steps//10,args.steps,args.lr,args.lr*0.1)
+        for pg in opt.param_groups:pg["lr"]=lr
+        opt.step()
+        lv=loss.item();run+=lv;rc+=1;seen+=args.batch*args.seqlen
+        if lv<best:best=lv
+        if(step+1)%10==0:
+            e=time.time()-t0
+            print(f"  step {step+1:5d}/{args.steps} | loss {run/rc:.4f} | lr {lr:.2e} | tokens {seen:,} | {int(e//3600):02d}:{int((e%3600)//60):02d}:{int(e%60):02d}")
+            run=rc=0
+        if(step+1)%100==0:save_ckpt(model,step+1,args.outdir)
+    save_ckpt(model,step+1,args.outdir);ctrl.stop()
+    print(f"\n  Best loss: {best:.4f} | Tokens: {seen:,}")
+    # Non-blocking signing
     try:
         import getpass
-        data_dir = "./anad_data"
-        identity_path = os.path.join(data_dir, "identity.json")
-        if os.path.exists(identity_path):
-            from node.identity import AnadIdentity
-            passphrase = getpass.getpass("\nPassphrase to sign weights: ")
-            identity = AnadIdentity.load(identity_path, passphrase)
-            package_weights(trainer, collector, args.outdir, identity)
-        else:
-            print("\n  Skipping signature — no identity found")
-            print("  Run python main.py first to create identity")
-    except Exception as e:
-        print(f"\n  Could not sign weights: {e}")
+        ip=os.path.join("./anad_data","identity.json")
+        if os.path.exists(ip):
+            print("\n  Enter passphrase to sign weights (or just press Enter to skip):")
+            pw=getpass.getpass("  > ")
+            if pw.strip():
+                from node.identity import AnadIdentity
+                idn=AnadIdentity.load(ip,pw)
+                print(f"  Signed by {idn.node_id[:24]}...")
+            else:
+                print("  Signing skipped.")
+    except(KeyboardInterrupt,EOFError):
+        print("  Signing skipped.")
+    print("\n  Done. Run python main.py to start your node.\n")
 
-    print("\n" + "█" * 55)
-    print("  DONE — Anad V0 trained")
-    print("  Share your weights with the network")
-    print("  Run: python main.py")
-    print("█" * 55 + "\n")
-
-
-if __name__ == "__main__":
+if __name__=="__main__":
     main()

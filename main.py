@@ -15,6 +15,7 @@ import os
 
 # Make sure imports work from any directory
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.stdout.reconfigure(encoding='utf-8')
 
 from node.node import AnadNode
 import getpass
