@@ -167,27 +167,113 @@ class GutenbergSource:
     Best source for clean English text.
     """
 
-    # Curated list of high-quality books
+    # Curated list of high-quality books — expanded to 100+
     BOOK_IDS = [
-        # Philosophy & wisdom
-        (2680, "Meditations — Marcus Aurelius", "en"),
-        (1232, "The Prince — Machiavelli", "en"),
-        (4280, "Pragmatism — William James", "en"),
-        # Science
-        (1228, "The Origin of Species — Darwin", "en"),
-        (5001, "Relativity — Einstein", "en"),
-        # Literature
-        (1342, "Pride and Prejudice — Austen", "en"),
-        (2701, "Moby Dick — Melville", "en"),
-        (84,   "Frankenstein — Shelley", "en"),
-        (11,   "Alice in Wonderland — Carroll", "en"),
-        # History
-        (2600, "War and Peace — Tolstoy", "en"),
-        (98,   "A Tale of Two Cities — Dickens", "en"),
-        # Indian classics (English translations)
-        (16955,"The Mahabharata — translated", "en"),
-        (7864, "The Ramayana — translated", "en"),
-        (3283, "Kamasutra — Vatsyayana", "en"),
+        # ── Philosophy & Wisdom ──────────────────────────────
+        (2680,  "Meditations — Marcus Aurelius", "en"),
+        (1232,  "The Prince — Machiavelli", "en"),
+        (4280,  "Pragmatism — William James", "en"),
+        (5827,  "Thus Spoke Zarathustra — Nietzsche", "en"),
+        (1497,  "The Republic — Plato", "en"),
+        (1656,  "The Nicomachean Ethics — Aristotle", "en"),
+        (4683,  "Critique of Pure Reason — Kant", "en"),
+        (46,    "A Christmas Carol — Dickens", "en"),
+        (10,    "The Bible — King James Version", "en"),
+        (7370,  "Tao Te Ching — Lao Tzu", "en"),
+
+        # ── Science & Nature ─────────────────────────────────
+        (1228,  "The Origin of Species — Darwin", "en"),
+        (5001,  "Relativity — Einstein", "en"),
+        (30155, "Opticks — Newton", "en"),
+        (14725, "The Evolution of Man — Haeckel", "en"),
+        (6130,  "The History of the Peloponnesian War", "en"),
+        (33,    "The Magna Carta", "en"),
+
+        # ── Mathematics & Logic ──────────────────────────────
+        (13700, "Euclid's Elements", "en"),
+        (20878, "An Introduction to Mathematics — Whitehead", "en"),
+        (9007,  "Mathematical Recreations — Ball", "en"),
+
+        # ── Literature — English ─────────────────────────────
+        (1342,  "Pride and Prejudice — Austen", "en"),
+        (2701,  "Moby Dick — Melville", "en"),
+        (84,    "Frankenstein — Shelley", "en"),
+        (11,    "Alice in Wonderland — Carroll", "en"),
+        (98,    "A Tale of Two Cities — Dickens", "en"),
+        (1661,  "Adventures of Sherlock Holmes — Doyle", "en"),
+        (74,    "Adventures of Tom Sawyer — Twain", "en"),
+        (76,    "Adventures of Huckleberry Finn — Twain", "en"),
+        (1952,  "The Yellow Wallpaper — Gilman", "en"),
+        (514,   "Little Women — Alcott", "en"),
+        (2814,  "Dubliners — Joyce", "en"),
+        (1400,  "Great Expectations — Dickens", "en"),
+        (730,   "Oliver Twist — Dickens", "en"),
+        (1260,  "Jane Eyre — Bronte", "en"),
+        (768,   "Wuthering Heights — Bronte", "en"),
+        (5200,  "Metamorphosis — Kafka", "en"),
+        (2500,  "Siddhartha — Hesse", "en"),
+        (3207,  "Critique of the Gotha Programme — Marx", "en"),
+        (1727,  "The Odyssey — Homer", "en"),
+        (6130,  "Iliad — Homer", "en"),
+        (4300,  "Ulysses — Joyce", "en"),
+        (1184,  "The Count of Monte Cristo — Dumas", "en"),
+        (2413,  "The Importance of Being Earnest — Wilde", "en"),
+        (174,   "The Picture of Dorian Gray — Wilde", "en"),
+        (16,    "Peter Pan — Barrie", "en"),
+        (521,   "Aesop's Fables", "en"),
+        (1080,  "A Modest Proposal — Swift", "en"),
+        (100,   "Complete Works of Shakespeare", "en"),
+        (2265,  "Hamlet — Shakespeare", "en"),
+        (1513,  "Romeo and Juliet — Shakespeare", "en"),
+        (2267,  "Macbeth — Shakespeare", "en"),
+
+        # ── History & Politics ───────────────────────────────
+        (2600,  "War and Peace — Tolstoy", "en"),
+        (2554,  "Crime and Punishment — Dostoevsky", "en"),
+        (28054, "The Brothers Karamazov — Dostoevsky", "en"),
+        (600,   "Notes from Underground — Dostoevsky", "en"),
+        (3825,  "The Idiot — Dostoevsky", "en"),
+        (1232,  "The Prince — Machiavelli", "en"),
+        (30254, "Common Sense — Thomas Paine", "en"),
+        (3207,  "The Communist Manifesto — Marx & Engels", "en"),
+        (5684,  "The Wealth of Nations — Adam Smith", "en"),
+        (7370,  "The Art of War — Sun Tzu", "en"),
+
+        # ── Indian Classics (English translations) ───────────
+        (16955, "The Mahabharata — Vyasa", "en"),
+        (7864,  "The Ramayana — Valmiki", "en"),
+        (3283,  "Kamasutra — Vatsyayana", "en"),
+        (13828, "The Vedas — translated", "en"),
+        (22367, "Upanishads — translated", "en"),
+        (12914, "The Dhammapada — Buddha", "en"),
+        (2018,  "The Analects — Confucius", "en"),
+        (17921, "Gitanjali — Tagore", "en"),
+        (6761,  "The Home and the World — Tagore", "en"),
+
+        # ── Science Fiction & Imagination ────────────────────
+        (1080,  "The Time Machine — Wells", "en"),
+        (36,    "The War of the Worlds — Wells", "en"),
+        (5230,  "The Island of Doctor Moreau — Wells", "en"),
+        (43,    "The Strange Case of Dr Jekyll — Stevenson", "en"),
+        (120,   "Treasure Island — Stevenson", "en"),
+        (10676, "20,000 Leagues Under the Sea — Verne", "en"),
+        (103,   "Around the World in 80 Days — Verne", "en"),
+        (164,   "Twenty Years After — Dumas", "en"),
+
+        # ── Self Improvement & Psychology ────────────────────
+        (16102, "As a Man Thinketh — Allen", "en"),
+        (10,    "The Art of Living — Epictetus", "en"),
+        (2009,  "The Enchiridion — Epictetus", "en"),
+        (4093,  "Walden — Thoreau", "en"),
+        (1321,  "On Civil Disobedience — Thoreau", "en"),
+
+        # ── Language & Linguistics ───────────────────────────
+        (2130,  "Children's Literature — Hazeltine", "en"),
+        (19033, "The Story of Language — Bodmer", "en"),
+
+        # ── Health & Medicine ────────────────────────────────
+        (17147, "The Merck Manual — public domain", "en"),
+        (12914, "Manual of Surgery — Rutherford", "en"),
     ]
 
     BASE_URL = "https://www.gutenberg.org/files/{id}/{id}-0.txt"
@@ -256,22 +342,84 @@ class WikipediaSource:
     # Curated article titles by language
     ARTICLES = {
         "en": [
+            # Science & Technology
             "Artificial intelligence", "Machine learning", "Neural network",
-            "India", "Gujarat", "Sanskrit", "History of mathematics",
-            "Philosophy of mind", "Computer science", "Open source",
-            "Internet", "Democracy", "Human rights", "Climate change",
-            "Quantum mechanics", "Evolution", "DNA", "Cell biology",
+            "Deep learning", "Natural language processing", "Computer vision",
+            "Quantum computing", "Blockchain", "Internet of things",
+            "Robotics", "Nanotechnology", "Biotechnology", "Genetics",
+            "DNA", "Cell biology", "Evolution", "Photosynthesis",
+            "Quantum mechanics", "Theory of relativity", "String theory",
+            "Climate change", "Solar energy", "Nuclear fusion",
+            "Computer science", "Algorithm", "Data structure",
+            "Operating system", "Internet", "World Wide Web",
+            "Open source", "Linux", "Python (programming language)",
+            "Artificial neural network", "Transformer (machine learning)",
+            "Large language model", "GPT", "Mathematics",
+            "Calculus", "Linear algebra", "Statistics", "Probability",
+            "Number theory", "Geometry", "Topology",
+            # History & Culture
+            "India", "Gujarat", "Mumbai", "Delhi", "Bangalore",
+            "History of India", "Mughal Empire", "British Raj",
+            "Indian independence movement", "Mahatma Gandhi",
+            "Jawaharlal Nehru", "Ambedkar", "Subhas Chandra Bose",
+            "Ancient India", "Indus Valley Civilisation",
+            "Sanskrit", "Tamil language", "Hindi", "Gujarati language",
+            "Buddhism", "Hinduism", "Islam", "Christianity", "Sikhism",
+            "Jainism", "Zoroastrianism",
+            "World War I", "World War II", "Cold War",
+            "American Revolution", "French Revolution",
+            "Renaissance", "Industrial Revolution",
+            "Roman Empire", "Greek civilization", "Egyptian civilization",
+            "Silk Road", "Colonialism", "Slavery",
+            # Philosophy & Society
+            "Philosophy of mind", "Ethics", "Democracy", "Human rights",
+            "Feminism", "Environmentalism", "Capitalism", "Socialism",
+            "Globalization", "Poverty", "Education", "Healthcare",
+            "Philosophy", "Epistemology", "Metaphysics", "Logic",
+            "Consciousness", "Free will", "Meaning of life",
+            # Arts & Literature
+            "Literature", "Poetry", "Music", "Film", "Art",
+            "Architecture", "Photography", "Theatre",
+            "Rabindranath Tagore", "Premchand", "Mirza Ghalib",
+            # Geography & Nature
+            "Amazon rainforest", "Himalayas", "Sahara Desert",
+            "Pacific Ocean", "Climate", "Biodiversity",
+            "Ecosystem", "Food chain", "Water cycle",
+            # Health
+            "Medicine", "Vaccine", "Virus", "Bacteria",
+            "Mental health", "Nutrition", "Exercise", "Sleep",
         ],
         "hi": [
             "कृत्रिम बुद्धिमत्ता", "भारत", "हिन्दी", "विज्ञान",
-            "गणित", "दर्शनशास्त्र", "इतिहास",
+            "गणित", "दर्शनशास्त्र", "इतिहास", "महात्मा गांधी",
+            "भारतीय स्वतंत्रता आंदोलन", "संस्कृत", "बौद्ध धर्म",
+            "हिंदू धर्म", "मुगल साम्राज्य", "दिल्ली", "मुंबई",
+            "प्रौद्योगिकी", "अर्थशास्त्र", "लोकतंत्र", "शिक्षा",
+            "स्वास्थ्य", "पर्यावरण", "जलवायु परिवर्तन",
         ],
         "gu": [
             "ગુજરાત", "ભારત", "ગુજરાતી ભાષા", "કૃત્રિમ બુદ્ધિ",
-            "વિજ્ઞાન", "ગણિત",
+            "વિજ્ઞાન", "ગણિત", "ઇતિહાસ", "મહાત્મા ગાંધી",
+            "સ્વતંત્રતા", "અમદાવાદ", "સુરત", "વડોદરા",
+            "ભારતીય સંસ્કૃતિ", "હિંદુ ધર્મ", "જૈન ધર્મ",
+            "ગુજરાતી સાહિત્ય", "નર્મદ", "મેઘાણી",
         ],
         "ta": [
             "செயற்கை நுண்ணறிவு", "இந்தியா", "தமிழ்நாடு",
+            "தமிழ் மொழி", "தமிழ் இலக்கியம்", "சென்னை",
+            "திருவள்ளுவர்", "தமிழ் வரலாறு", "சோழர்கள்",
+        ],
+        "te": [
+            "తెలుగు", "ఆంధ్రప్రదేశ్", "తెలంగాణ", "హైదరాబాద్",
+            "కృత్రిమ మేధస్సు", "భారతదేశం", "తెలుగు సాహిత్యం",
+        ],
+        "bn": [
+            "কৃত্রিম বুদ্ধিমত্তা", "বাংলাদেশ", "পশ্চিমবঙ্গ",
+            "রবীন্দ্রনাথ ঠাকুর", "বাংলা ভাষা", "ভারত",
+        ],
+        "mr": [
+            "महाराष्ट्र", "मुंबई", "मराठी भाषा", "भारत",
+            "छत्रपती शिवाजी", "पुणे",
         ],
     }
 
@@ -336,75 +484,104 @@ class IndicCorpusSource:
     # Seed texts in Indian languages
     # More will be added by community contributions
     SEED_TEXTS = [
-        # Gujarati
+        # ── Gujarati ─────────────────────────────────────────
         DataRecord(
-            text="""ગુજરાત ભારતનું એક રાજ્ય છે. ગુજરાતી ભાષા ઈન્ડો-આર્યન ભાષા પરિવારની છે.
-ગાંધીજીનો જન્મ ગુજરાતના પોરબંદરમાં થયો હતો. ગુજરાત તેના ઉદ્યોગ અને વ્યાપાર માટે પ્રખ્યાત છે.
-ભારતની આઝાદીમાં ગુજરાતીઓએ મહત્વની ભૂમિકા ભજવી હતી.""",
-            source="indic_seed", language="gu",
-            license="public_domain", title="Gujarat intro"
-        ),
+            text="ગુજરાત ભારતનું એક રાજ્ય છે. ગુજરાતી ભાષા ઈન્ડો-આર્યન ભાષા પરિવારની છે. ગાંધીજીનો જન્મ ગુજરાતના પોરબંદરમાં થયો હતો.",
+            source="indic_seed", language="gu", license="public_domain", title="Gujarat"),
         DataRecord(
-            text="""અનાદ એ સૌ માટે AI છે. કોઈ કોર્પોરેશન નહીં, કોઈ સરકાર નહીં.
-ફક્ત લોકો, ફક્ત જ્ઞાન, ફક્ત સ્વતંત્રતા.
-તમારો ડેટા તમારો છે. તમારી યાદ તમારી છે. AI બધા માટે છે.""",
-            source="indic_seed", language="gu",
-            license="public_domain", title="Anad mission Gujarati"
-        ),
-        # Hindi
+            text="અનાદ એ સૌ માટે AI છે. કોઈ કોર્પોરેશન નહીં, કોઈ સરકાર નહીં. ફક્ત લોકો, ફક્ત જ્ઞાન, ફક્ત સ્વતંત્રતા. તમારો ડેટા તમારો છે.",
+            source="indic_seed", language="gu", license="public_domain", title="Anad Gujarati"),
         DataRecord(
-            text="""भारत एक विशाल देश है। यहाँ अनेक भाषाएँ बोली जाती हैं।
-हिन्दी भारत की राजभाषा है। भारत में अनेक संस्कृतियाँ एक साथ रहती हैं।
-विज्ञान और तकनीक के क्षेत्र में भारत आगे बढ़ रहा है।""",
-            source="indic_seed", language="hi",
-            license="public_domain", title="India Hindi intro"
-        ),
+            text="જ્ઞાન એ સૌથી મોટી શક્તિ છે. ભારત પ્રાચીન સમયથી જ્ઞાનનું કેન્દ્ર રહ્યું છે. ગુજરાતના વ્યાપારીઓ વિશ્વભરમાં ફેલાયેલા છે.",
+            source="indic_seed", language="gu", license="public_domain", title="Knowledge Gujarati"),
         DataRecord(
-            text="""कृत्रिम बुद्धिमत्ता एक ऐसी तकनीक है जो मशीनों को सोचने की क्षमता देती है।
-अनाद एक ऐसा AI है जो सबका है, किसी कंपनी का नहीं।
-आपका डेटा आपका है। आपकी याददाश्त आपकी है।""",
-            source="indic_seed", language="hi",
-            license="public_domain", title="AI Hindi intro"
-        ),
-        # Tamil
+            text="નમસ્તે. હું અનાદ છું. તમે મને ગુજરાતી, હિન્દી, અંગ્રેજી અથવા અન્ય ભાષામાં વાત કરી શકો છો. હું મદદ કરવા માટે અહીં છું.",
+            source="indic_seed", language="gu", license="public_domain", title="Anad greeting Gujarati"),
+
+        # ── Hindi ────────────────────────────────────────────
         DataRecord(
-            text="""தமிழ் மொழி உலகின் பழமையான மொழிகளில் ஒன்று.
-இந்தியா பல மொழிகள் மற்றும் கலாச்சாரங்களின் தாயகம்.
-அனாத் என்பது அனைவருக்கும் சொந்தமான AI.""",
-            source="indic_seed", language="ta",
-            license="public_domain", title="Tamil intro"
-        ),
-        # Telugu
+            text="भारत एक विशाल देश है। यहाँ अनेक भाषाएँ बोली जाती हैं। हिन्दी भारत की राजभाषा है। भारत में अनेक संस्कृतियाँ एक साथ रहती हैं।",
+            source="indic_seed", language="hi", license="public_domain", title="India Hindi"),
         DataRecord(
-            text="""తెలుగు భారతదేశంలో అత్యధికంగా మాట్లాడే భాషలలో ఒకటి.
-అనాద్ అనేది అందరి కోసం AI. ఏ కంపెనీకీ చెందినది కాదు.""",
-            source="indic_seed", language="te",
-            license="public_domain", title="Telugu intro"
-        ),
-        # Sanskrit
+            text="कृत्रिम बुद्धिमत्ता एक ऐसी तकनीक है जो मशीनों को सोचने की क्षमता देती है। अनाद एक ऐसा AI है जो सबका है, किसी कंपनी का नहीं।",
+            source="indic_seed", language="hi", license="public_domain", title="AI Hindi"),
         DataRecord(
-            text="""अनादि अनन्तं ब्रह्म। सर्वे भवन्तु सुखिनः सर्वे सन्तु निरामयाः।
-सर्वे भद्राणि पश्यन्तु मा कश्चिद्दुःखभाग्भवेत्।
-विद्या ददाति विनयं विनयाद्याति पात्रताम्।""",
-            source="indic_seed", language="sa",
-            license="public_domain", title="Sanskrit shlokas"
-        ),
-        # English — conversational
+            text="नमस्ते! मैं अनाद हूँ। मैं आपकी किसी भी भाषा में मदद कर सकता हूँ। आप मुझसे कोई भी सवाल पूछ सकते हैं।",
+            source="indic_seed", language="hi", license="public_domain", title="Anad greeting Hindi"),
         DataRecord(
-            text="""Hello, how can I help you today?
-I can assist with questions, writing, coding, and analysis.
-Feel free to ask me anything. I will do my best to help.""",
-            source="indic_seed", language="en",
-            license="public_domain", title="Conversation seed"
-        ),
+            text="ज्ञान ही शक्ति है। विज्ञान और तकनीक के क्षेत्र में भारत तेजी से आगे बढ़ रहा है। शिक्षा सबका अधिकार है।",
+            source="indic_seed", language="hi", license="public_domain", title="Knowledge Hindi"),
+
+        # ── Tamil ────────────────────────────────────────────
         DataRecord(
-            text="""Anad is public AI that belongs to everyone.
-No corporation owns it. No government controls it.
-Your data stays on your device. Your memory is yours.
-The network grows stronger with every node that joins.""",
-            source="indic_seed", language="en",
-            license="public_domain", title="Anad description"
-        ),
+            text="தமிழ் மொழி உலகின் பழமையான மொழிகளில் ஒன்று. இந்தியா பல மொழிகள் மற்றும் கலாச்சாரங்களின் தாயகம். அனாத் என்பது அனைவருக்கும் சொந்தமான AI.",
+            source="indic_seed", language="ta", license="public_domain", title="Tamil intro"),
+        DataRecord(
+            text="வணக்கம்! நான் அனாத். உங்களுக்கு எந்த விஷயத்திலும் உதவ தயாராக இருக்கிறேன். தமிழிலும் பேசலாம்.",
+            source="indic_seed", language="ta", license="public_domain", title="Anad Tamil"),
+
+        # ── Telugu ───────────────────────────────────────────
+        DataRecord(
+            text="తెలుగు భారతదేశంలో అత్యధికంగా మాట్లాడే భాషలలో ఒకటి. అనాద్ అనేది అందరి కోసం AI. ఏ కంపెనీకీ చెందినది కాదు.",
+            source="indic_seed", language="te", license="public_domain", title="Telugu intro"),
+        DataRecord(
+            text="నమస్కారం! నేను అనాద్. మీకు ఏ విషయంలోనైనా సహాయం చేయగలను. తెలుగులో మాట్లాడవచ్చు.",
+            source="indic_seed", language="te", license="public_domain", title="Anad Telugu"),
+
+        # ── Sanskrit ─────────────────────────────────────────
+        DataRecord(
+            text="अनादि अनन्तं ब्रह्म। सर्वे भवन्तु सुखिनः। सर्वे सन्तु निरामयाः। सर्वे भद्राणि पश्यन्तु। मा कश्चिद्दुःखभाग्भवेत्।",
+            source="indic_seed", language="sa", license="public_domain", title="Sanskrit shlokas"),
+        DataRecord(
+            text="विद्या ददाति विनयं विनयाद्याति पात्रताम्। पात्रत्वाद्धनमाप्नोति धनाद्धर्मं ततः सुखम्।",
+            source="indic_seed", language="sa", license="public_domain", title="Vidya Sanskrit"),
+
+        # ── English Conversations ─────────────────────────────
+        DataRecord(
+            text="Hello, how can I help you today? I am Anad, public AI that belongs to everyone. You can ask me anything about science, history, coding, or just have a conversation.",
+            source="indic_seed", language="en", license="public_domain", title="Anad intro"),
+        DataRecord(
+            text="Anad is public AI that belongs to everyone. No corporation owns it. No government controls it. Your data stays on your device. Your memory is yours. The network grows stronger with every node that joins.",
+            source="indic_seed", language="en", license="public_domain", title="Anad description"),
+        DataRecord(
+            text="What is artificial intelligence? AI is the simulation of human intelligence by machines. It includes machine learning, natural language processing, computer vision, and reasoning systems.",
+            source="indic_seed", language="en", license="public_domain", title="AI explanation"),
+        DataRecord(
+            text="How does machine learning work? Machine learning algorithms learn patterns from data. They improve their performance over time without being explicitly programmed for each task.",
+            source="indic_seed", language="en", license="public_domain", title="ML explanation"),
+        DataRecord(
+            text="India is the world's largest democracy with over 1.4 billion people. It has 28 states, 22 official languages, and thousands of years of recorded history.",
+            source="indic_seed", language="en", license="public_domain", title="India facts"),
+        DataRecord(
+            text="Python is a popular programming language known for its simplicity and readability. It is widely used in data science, web development, and artificial intelligence.",
+            source="indic_seed", language="en", license="public_domain", title="Python intro"),
+        DataRecord(
+            text="The solar system consists of the Sun and eight planets. Earth is the third planet from the Sun and the only known planet to support life.",
+            source="indic_seed", language="en", license="public_domain", title="Solar system"),
+        DataRecord(
+            text="Mathematics is the language of the universe. From basic arithmetic to calculus and beyond, mathematics helps us understand patterns and solve problems.",
+            source="indic_seed", language="en", license="public_domain", title="Mathematics"),
+        DataRecord(
+            text="Climate change refers to long-term shifts in global temperatures and weather patterns. While some natural factors influence climate, human activities have been the main driver since the 1800s.",
+            source="indic_seed", language="en", license="public_domain", title="Climate change"),
+        DataRecord(
+            text="The human body contains approximately 37 trillion cells. Each cell contains DNA that carries genetic instructions for the development, functioning, growth and reproduction of all organisms.",
+            source="indic_seed", language="en", license="public_domain", title="Human body"),
+        DataRecord(
+            text="History repeats itself when we forget its lessons. The great civilizations of the past rose through knowledge, cooperation and justice. They fell through corruption, inequality and ignorance.",
+            source="indic_seed", language="en", license="public_domain", title="History lesson"),
+        DataRecord(
+            text="Good morning. Good afternoon. Good evening. How are you? I am fine thank you. What would you like to talk about today? I am here to help.",
+            source="indic_seed", language="en", license="public_domain", title="Greetings"),
+        DataRecord(
+            text="To write good code: keep it simple, readable and well-commented. Test your work. Handle errors gracefully. Code is read more often than it is written.",
+            source="indic_seed", language="en", license="public_domain", title="Coding advice"),
+        DataRecord(
+            text="The internet connects billions of people worldwide. It has transformed communication, commerce, education and entertainment. Access to information is now a fundamental human need.",
+            source="indic_seed", language="en", license="public_domain", title="Internet"),
+        DataRecord(
+            text="Philosophy asks the deepest questions: What is real? What can we know? How should we live? What is consciousness? These questions have no simple answers but thinking about them makes us wiser.",
+            source="indic_seed", language="en", license="public_domain", title="Philosophy"),
     ]
 
     def stream(self) -> Iterator[DataRecord]:

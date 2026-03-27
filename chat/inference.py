@@ -83,46 +83,66 @@ class AnadInference:
         temperature: float = 0.8,
         top_p: float = 0.9,
         top_k: int = 50,
+        repetition_penalty: float = 1.5,
+        no_repeat_ngram: int = 4,
     ) -> str:
         """
         Generate a response to a prompt.
 
-        temperature: 0.1 = focused, 1.0 = creative
-        top_p:       nucleus sampling threshold
-        top_k:       only sample from top K tokens
+        temperature:        0.1 = focused, 1.0 = creative
+        repetition_penalty: penalise tokens already generated (1.5 = strong)
+        no_repeat_ngram:    block any ngram from repeating (4 = good default)
         """
         if not self._loaded:
             return "Model not loaded. Run python train.py first."
 
-        # Encode prompt
         try:
             prompt_ids = self.tokenizer.encode(prompt)
         except Exception:
             prompt_ids = [self.tokenizer.special_tokens["<BOS>"]]
 
         tokens = torch.tensor([prompt_ids], dtype=torch.long).to(self.device)
-
         generated = []
 
         with torch.no_grad():
-            for _ in range(max_new_tokens):
-                # Trim context if too long
+            for step in range(max_new_tokens):
                 if tokens.shape[1] > self.config.max_seq_len:
                     tokens = tokens[:, -self.config.max_seq_len:]
 
                 logits = self.model(tokens)
-                next_logits = logits[0, -1, :]  # last token logits
+                next_logits = logits[0, -1, :].clone()
 
-                # Temperature
+                # ── Repetition penalty ──────────────────────────────
+                # Penalise every token that has appeared in generated so far
+                if repetition_penalty != 1.0 and generated:
+                    seen = set(generated)
+                    for tid in seen:
+                        if tid < next_logits.size(0):
+                            if next_logits[tid] > 0:
+                                next_logits[tid] /= repetition_penalty
+                            else:
+                                next_logits[tid] *= repetition_penalty
+
+                # ── No-repeat ngram blocking ─────────────────────────
+                # If the last (n-1) tokens appeared before, ban what followed
+                if no_repeat_ngram > 1 and len(generated) >= no_repeat_ngram - 1:
+                    ngram_prefix = tuple(generated[-(no_repeat_ngram - 1):])
+                    for i in range(len(generated) - (no_repeat_ngram - 1)):
+                        if tuple(generated[i:i + no_repeat_ngram - 1]) == ngram_prefix:
+                            banned = generated[i + no_repeat_ngram - 1]
+                            if banned < next_logits.size(0):
+                                next_logits[banned] = float('-inf')
+
+                # ── Temperature ──────────────────────────────────────
                 if temperature > 0:
                     next_logits = next_logits / temperature
 
-                # Top-k filtering
+                # ── Top-k ────────────────────────────────────────────
                 if top_k > 0:
                     values, _ = torch.topk(next_logits, min(top_k, next_logits.size(-1)))
                     next_logits[next_logits < values[-1]] = float('-inf')
 
-                # Top-p (nucleus) sampling
+                # ── Top-p nucleus sampling ────────────────────────────
                 if top_p < 1.0:
                     sorted_logits, sorted_idx = torch.sort(next_logits, descending=True)
                     cumulative = torch.cumsum(F.softmax(sorted_logits, dim=-1), dim=-1)
@@ -132,16 +152,31 @@ class AnadInference:
                         0, sorted_idx, sorted_logits
                     )
 
-                # Sample
+                # ── Sample ───────────────────────────────────────────
                 probs = F.softmax(next_logits, dim=-1)
-                next_token = torch.multinomial(probs, num_samples=1)
+                # Safety: if all probs are zero/nan, pick randomly
+                if not torch.isfinite(probs).all() or probs.sum() < 1e-9:
+                    next_token = torch.randint(0, self.config.vocab_size, (1,))
+                else:
+                    next_token = torch.multinomial(probs, num_samples=1)
+
+                tid = next_token.item()
 
                 # Stop at EOS
-                if next_token.item() == self.tokenizer.special_tokens.get("<EOS>", 3):
+                if tid == self.tokenizer.special_tokens.get("<EOS>", 3):
                     break
 
-                generated.append(next_token.item())
+                generated.append(tid)
                 tokens = torch.cat([tokens, next_token.unsqueeze(0)], dim=1)
+
+                # Stop if we hit a natural sentence end after min tokens
+                if step > 20:
+                    try:
+                        word = self.tokenizer.decode([tid])
+                        if any(word.strip().endswith(p) for p in ['.', '!', '?', '\n']):
+                            break
+                    except Exception:
+                        pass
 
         # Decode
         try:

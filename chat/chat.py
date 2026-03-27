@@ -83,8 +83,8 @@ class AnadChat:
         self.session_turns = []
 
         # Response settings
-        self.temperature = 0.8
-        self.max_tokens  = 200
+        self.temperature = 0.7
+        self.max_tokens  = 80
         self.show_stats  = False
 
     def start(self):
@@ -184,6 +184,8 @@ class AnadChat:
             temperature=self.temperature,
             top_p=0.9,
             top_k=50,
+            repetition_penalty=1.5,
+            no_repeat_ngram=4,
         )
         elapsed = time.time() - t0
 
